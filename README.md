@@ -11,7 +11,7 @@ All processing occurs **locally in your browser** — no data is ever transmitte
 
 Open the dashboard directly in your browser:
 
-> **https://uk-generations-study.github.io/data-dashboard-synthetic-data-demo/**
+> **https://uk-generations-study.github.io/data-dashboard-demo/**
 
 Then drag-and-drop `synthetic_data.json` (included in this repository) onto the drop zone.
 
