@@ -1,14 +1,24 @@
-# Generations Study – Derived Data Dashboard (Demo)
+# Generations Study – Data Dashboard (Demo)
 
-A browser-based prototype for exploring the Generations Study derived dataset.
-All processing occurs **locally in your browser** — no data is transmitted externally.
+A browser-based prototype for exploring the Generations Study dataset.
+All processing occurs **locally in your browser** — no data is ever transmitted externally.
 
 ---
 
 ## Quick Start
 
+### Option A — Run from GitHub Pages (no download needed)
+
+Open the dashboard directly in your browser:
+
+> **https://uk-generations-study.github.io/data-dashboard-synthetic-data-demo/**
+
+Then drag-and-drop `synthetic_data.json` (included in this repository) onto the drop zone.
+
+### Option B — Run locally
+
 ```
-generations-demo/
+data-dashboard-synthetic-data-demo/
 ├── index.html            ← Open this file to launch the dashboard
 ├── app.js                ← Dashboard logic
 ├── synthetic_data.json   ← 1000-participant synthetic dataset
@@ -19,13 +29,12 @@ generations-demo/
 └── README.md             ← This file
 ```
 
-### To run
+1. Download or clone this repository
+2. Open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari)
+3. Click **Select File** or drag-and-drop `synthetic_data.json` onto the drop zone
+4. Optionally load a JSON Schema file to enrich variable labels, types, and groupings
 
-1. Open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari)
-2. Click **Select File** or drag-and-drop `synthetic_data.json` onto the drop zone
-3. The dashboard loads immediately — no installation, no server required
-
-> **Note:** Chart.js is loaded from CDN (`cdn.jsdelivr.net`). An internet connection is required for the initial page load. Once loaded, all functionality is offline.
+> **Note:** Chart.js is loaded from CDN (`cdn.jsdelivr.net`). An internet connection is required for the initial page load. Once loaded, all functionality works offline.
 
 ---
 
@@ -34,27 +43,45 @@ generations-demo/
 | Tab | What it does |
 |---|---|
 | **Overview** | Dataset summary — participant count, completeness, variable groups |
-| **Explore** | Click any variable in the sidebar for histogram / bar chart / box plot + summary stats |
+| **Explore** | Click any variable for histogram / bar chart / violin plot + summary stats; download chart as PNG |
 | **Missingness** | Horizontal bar chart of null % and sentinel NA % for all variables |
 | **Stratified** | Compare a numeric variable's distribution across groups of a categorical variable |
-| **Cohort Builder** | Build AND/OR filter chains with live cohort size; export cohort JSON |
+| **Cohort Builder** | Build AND/OR filter chains with live cohort preview; export cohort as JSON; view attrition flow with PNG export |
 | **Table 1** | Summary statistics table for the active cohort; optional stratification; CSV export |
 
 ### Sidebar
 
 - **Search box** — filter variables by name or description
-- **Group buttons** — filter by: Body, Repro, Lifestyle, Medical, Family
+- **Group buttons** — filter by variable group (e.g. Body, Reproductive, Lifestyle, Medical, Family History)
 - **Click any variable** — jumps to Explore tab with that variable selected
+
+### Schema file (optional)
+
+Loading a JSON Schema file (Draft 2020-12) enriches the dashboard with:
+- Human-readable variable labels and descriptions
+- Correct variable types (numeric, integer, categorical, binary)
+- Code labels (e.g. 0 = No, 1 = Yes)
+- Units shown on chart axes
+- Variable groupings for the sidebar filter buttons
+- Sentinel value definitions (999 / 9999 = Not Applicable)
+
+---
+
+## Privacy
+
+All data handling occurs entirely within your browser via the browser's `FileReader` API.
+No participant data is uploaded, transmitted, or stored anywhere outside your device.
+The only external network requests are to load the Chart.js library from CDN on first page load.
 
 ---
 
 ## Synthetic Dataset
 
-- **1000 participants**, all fields drawn from the `DerivedVariables.json` schema
+- **1000 participants**, fields drawn from the Generations Study variable schema
 - Realistic epidemiological distributions (BMI ~N(24.5, 4.5), smoking ~16%, etc.)
 - Logical coherence maintained: BMI derived from height/weight; parity consistent with `R0_Parous`; HRT confined to older/postmenopausal participants; etc.
 - Plausible missingness (~3–15% per variable; higher for age-conditional variables)
-- Sentinel values (999 / 9999) preserved exactly as schema defines them
+- Sentinel values (999 / 9999) preserved exactly as the schema defines them
 - No real participant data — all values are synthetic
 
 ### Regenerate
@@ -123,12 +150,13 @@ df_cohort = df[mask]
 | Decision | Rationale |
 |---|---|
 | Single-page HTML + vanilla JS | No build step, no server, open and run |
-| Chart.js via CDN | Mature, well-maintained; avoids embedding 200 KB of library code |
+| Chart.js via CDN | Mature, well-maintained; avoids embedding library code in the repository |
 | Drag-and-drop data loading | Matches privacy requirement; data never leaves device |
 | Sidebar + tab layout | Separates variable navigation from analytical views |
 | Sentinel vs null distinction | Preserves schema semantics in missingness visualisation |
-| Cohort export as JSON | Machine-readable; reproducible; includes full R0_TCode list |
+| Cohort export as JSON | Machine-readable; reproducible; includes full participant ID list |
 | Generate-then-load architecture | Dataset is separate from app — analysts can load real data when available |
+| JSON Schema support | Enriches any compatible dataset with labels, types, and groupings |
 
 ---
 
@@ -142,4 +170,4 @@ df_cohort = df[mask]
 ---
 
 *This is a synthetic demonstration. All participant records are fictitious.*
-*Schema: `DerivedVariables.json` (Draft 2020-12) — Breakthrough Generations Study.*
+*Schema: Generations Study variable definitions (JSON Schema Draft 2020-12).*
