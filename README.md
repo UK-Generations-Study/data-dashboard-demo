@@ -7,32 +7,28 @@ All processing occurs **locally in your browser** — no data is ever transmitte
 
 ## Quick Start
 
-### Option A — Run from GitHub Pages (no download needed)
-
-Open the dashboard directly in your browser:
+Open the dashboard directly in your browser — no installation needed:
 
 > **https://uk-generations-study.github.io/data-dashboard-demo/**
 
-Then drag-and-drop `synthetic_data.json` (included in this repository) onto the drop zone.
+Then:
+1. Drag-and-drop `synthetic_data.json` onto the **Data File** drop zone
+2. Drag-and-drop `DerivedVariables_Schema.json` onto the **Schema File** drop zone (enriches variable labels, types, units, and groupings)
+3. The dashboard loads immediately
 
-### Option B — Run locally
+### Repository contents
 
 ```
-data-dashboard-synthetic-data-demo/
-├── index.html            ← Open this file to launch the dashboard
-├── app.js                ← Dashboard logic
-├── synthetic_data.json   ← 1000-participant synthetic dataset
-├── sample_cohort.json    ← Example cohort definition (JSON)
-├── generate_data.py      ← Python script that produced the dataset
-├── examples.R            ← R loading and analysis examples
-├── examples.py           ← Python loading and analysis examples
-└── README.md             ← This file
+├── index.html                   ← Dashboard (open locally as an alternative)
+├── app.js                       ← Dashboard logic
+├── synthetic_data.json          ← 1000-participant synthetic dataset
+├── DerivedVariables_Schema.json ← JSON Schema (variable labels, types, codes, units)
+├── sample_cohort.json           ← Example cohort definition (JSON)
+├── generate_data.py             ← Python script that produced the dataset
+├── examples.R                   ← R loading and analysis examples
+├── examples.py                  ← Python loading and analysis examples
+└── README.md                    ← This file
 ```
-
-1. Download or clone this repository
-2. Open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari)
-3. Click **Select File** or drag-and-drop `synthetic_data.json` onto the drop zone
-4. Optionally load a JSON Schema file to enrich variable labels, types, and groupings
 
 > **Note:** Chart.js is loaded from CDN (`cdn.jsdelivr.net`). An internet connection is required for the initial page load. Once loaded, all functionality works offline.
 
@@ -47,7 +43,7 @@ data-dashboard-synthetic-data-demo/
 | **Missingness** | Horizontal bar chart of null % and sentinel NA % for all variables |
 | **Stratified** | Compare a numeric variable's distribution across groups of a categorical variable |
 | **Cohort Builder** | Build AND/OR filter chains with live cohort preview; export cohort as JSON; view attrition flow with PNG export |
-| **Table 1** | Summary statistics table for the active cohort; optional stratification; CSV export |
+| **Descriptive** | Summary statistics table for the active cohort; optional stratification; CSV export |
 
 ### Sidebar
 
