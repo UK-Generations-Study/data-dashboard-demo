@@ -449,9 +449,106 @@
     ::-webkit-scrollbar-thumb { background: var(--purple-mid); border-radius: 3px; opacity: 0.4; }
     ::-webkit-scrollbar-thumb:hover { background: var(--purple); }
 
+    /* Hamburger: hidden on desktop */
+    #btn-sidebar-toggle { display: none; }
+
     @media (max-width: 900px) {
       .sidebar { width: 220px; }
       #strat-charts-area { grid-template-columns: 1fr; }
+    }
+
+    /* ── 768 px – Mobile layout ───────────────────────────────────────── */
+    @media (max-width: 768px) {
+      /* Sidebar hidden by default; overlaid when body.sidebar-open */
+      .sidebar {
+        display: none !important;
+        position: fixed;
+        top: 0; left: 0;
+        height: 100%;
+        z-index: 200;
+        width: 280px;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.25);
+      }
+      body.sidebar-open .sidebar {
+        display: flex !important;
+      }
+      /* Semi-transparent backdrop behind open sidebar */
+      body.sidebar-open::after {
+        content: '';
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 199;
+      }
+
+      /* Hamburger button */
+      #btn-sidebar-toggle {
+        display: flex;
+        align-items: center; justify-content: center;
+        background: rgba(255,255,255,0.15);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 6px;
+        width: 36px; height: 36px;
+        font-size: 18px;
+        cursor: pointer;
+        flex-shrink: 0;
+        font-family: inherit;
+      }
+
+      /* Header */
+      header {
+        height: auto;
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .logo-wordmark { display: none; }
+      .logo-divider  { display: none; }
+      .header-right  { gap: 8px; }
+      .header-badge  { font-size: 9px; padding: 3px 8px; }
+
+      /* App shell height */
+      .app-shell { height: calc(100vh - 56px); }
+
+      /* Nav tabs scroll horizontally */
+      .nav-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 12px;
+        flex-shrink: 0;
+      }
+
+      /* Cards */
+      .card { padding: 12px 14px; }
+
+      /* Charts */
+      .chart-area { height: 220px; }
+      .miss-chart-area { height: 280px; }
+
+      /* Drop zone grid */
+      .dz-row { grid-template-columns: 1fr; }
+
+      /* Stratified charts */
+      #strat-charts-area { grid-template-columns: 1fr; }
+
+      /* Cohort builder: collapse two-column layout */
+      #tab-cohort > div { grid-template-columns: 1fr !important; }
+
+      /* Tab panels padding */
+      .tab-panels { padding: 16px 14px; }
+    }
+
+    /* ── 480 px – Small phones ────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      body { font-size: 13px; }
+      .logo-text p { font-size: 13px; }
+      .logo-g { height: 30px; }
+      .stat-value { font-size: 22px; }
+      .card { padding: 10px 12px; }
+      .tab-panels { padding: 12px 10px; }
+      .nav-tab { padding: 10px 12px; font-size: 12px; }
+      #cohort-badge { font-size: 11px; }
+      #cohort-badge .cnt { font-size: 13px; }
     }
   </style>
 </head>
@@ -459,6 +556,7 @@
 
 <!-- ── Header ─────────────────────────────────────────────────────────── -->
 <header>
+  <button id="btn-sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
   <div class="logo-block">
     <img class="logo-g" src="logo-g.png" alt="">
     <img class="logo-wordmark" src="logo-white.png" alt="generations"
@@ -528,7 +626,7 @@
             </h2>
             <p style="max-width:580px;margin:0 auto 12px;font-size:14px;line-height:1.7;color:var(--text)">
               This tool allows researchers to explore, filter and summarise
-              Breakthrough Generations Study data directly in the browser.
+              Breast Cancer Now Generations Study data directly in the browser.
               You can visualise variable distributions, compare groups, build
               cohort definitions and export results.
             </p>
@@ -610,7 +708,7 @@
       <!-- ── Explore ─────────────────────────────────────────────────── -->
       <div id="tab-explore" class="tab-panel">
         <div id="explore-prompt" style="text-align:center;padding:60px;color:var(--muted)">
-          ← Select a variable from the sidebar to explore its distribution.
+          Tap ☰ to open the variable list, then select a variable to explore its distribution.
         </div>
         <div id="var-detail">
           <div class="card">

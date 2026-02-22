@@ -608,6 +608,7 @@ function selectVar(key) {
   renderVarList();
   showTab('explore');
   renderVarDetail(key, cohortData);
+  document.body.classList.remove('sidebar-open');
 }
 
 // ── Tab navigation ─────────────────────────────────────────────────────────
@@ -1627,4 +1628,17 @@ document.addEventListener('DOMContentLoaded', () => {
     activeGroup = btn.dataset.group;
     renderVarList();
   });
+
+  // ── Mobile sidebar toggle ─────────────────────────────────────────────
+  const sidebarToggle = $('btn-sidebar-toggle');
+  if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => {
+      document.body.classList.toggle('sidebar-open');
+    });
+    document.querySelector('.app-shell').addEventListener('click', e => {
+      if (!e.target.closest('.sidebar') && !e.target.closest('#btn-sidebar-toggle')) {
+        document.body.classList.remove('sidebar-open');
+      }
+    });
+  }
 });
