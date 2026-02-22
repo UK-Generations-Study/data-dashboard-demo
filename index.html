@@ -443,6 +443,23 @@
       border-left: 4px solid var(--lime);
     }
 
+    /* ── Warning banner ──────────────────────────────────────────────── */
+    #warn-banner {
+      display: none; align-items: flex-start; gap: 12px;
+      background: #fff7ed; border: 1px solid #f5c89a;
+      border-left: 4px solid var(--warn);
+      border-radius: 6px; padding: 10px 14px;
+      margin: 12px 20px 0; font-size: 13px; color: #92400e;
+      line-height: 1.5;
+    }
+    #warn-banner-text { flex: 1; }
+    #warn-banner-close {
+      background: none; border: none; font-size: 20px; line-height: 1;
+      cursor: pointer; color: #92400e; opacity: 0.6; flex-shrink: 0;
+      padding: 0 2px;
+    }
+    #warn-banner-close:hover { opacity: 1; }
+
     /* ── Scrollbar ───────────────────────────────────────────────────── */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: var(--grey-bg); }
@@ -613,6 +630,12 @@
       <div class="nav-tab" data-tab="table1">Descriptive</div>
     </nav>
 
+    <!-- Warning banner — stays visible until dismissed -->
+    <div id="warn-banner">
+      <div id="warn-banner-text"></div>
+      <button id="warn-banner-close" title="Dismiss" onclick="this.parentElement.style.display='none'">×</button>
+    </div>
+
     <div class="tab-panels" id="tab-panels">
 
       <!-- ── Load screen ─────────────────────────────────────────────── -->
@@ -648,36 +671,44 @@
             <!-- Data file panel -->
             <div class="dz-panel" id="dz-data">
               <div class="dz-icon">📊</div>
-              <h3>Data File</h3>
-              <p id="dz-data-hint">Drop your <strong>.json</strong> data array here,<br>or click to browse.</p>
+              <h3>Data File(s)</h3>
+              <p id="dz-data-hint">Drop one or more <strong>.json</strong> data files here,<br>or click to browse. Files are merged on TCode.</p>
               <div id="dz-data-ok" style="display:none">
                 <div class="dz-badge-ok">&#10003; Loaded</div>
-                <div class="dz-status" id="dz-data-name"></div>
+                <div class="dz-status" id="dz-data-name" style="font-size:11px;text-align:left;width:100%"></div>
+                <button class="btn-secondary" style="font-size:11px;padding:4px 12px;margin-top:4px"
+                        onclick="event.stopPropagation();document.getElementById('file-input').click()">
+                  + Add another file
+                </button>
               </div>
               <button class="btn-primary" id="btn-data-select"
                       onclick="event.stopPropagation();document.getElementById('file-input').click()">
-                Select Data File
+                Select Data File(s)
               </button>
-              <input type="file" id="file-input" accept=".json" style="display:none" />
+              <input type="file" id="file-input" accept=".json" multiple style="display:none" />
             </div>
 
             <!-- Schema file panel -->
             <div class="dz-panel" id="dz-schema">
               <div class="dz-icon">📋</div>
-              <h3>Schema File</h3>
-              <p id="dz-schema-hint">Drop a <strong>JSON Schema</strong> here to load<br>variable labels, types &amp; groups.</p>
+              <h3>Schema File(s)</h3>
+              <p id="dz-schema-hint">Drop one or more <strong>JSON Schema</strong> files here.<br>One schema per data file, merged automatically.</p>
               <div id="dz-schema-ok" style="display:none">
                 <div class="dz-badge-ok">&#10003; Loaded</div>
-                <div class="dz-status" id="dz-schema-name"></div>
+                <div class="dz-status" id="dz-schema-name" style="font-size:11px;text-align:left;width:100%"></div>
+                <button class="btn-secondary" style="font-size:11px;padding:4px 12px;margin-top:4px"
+                        onclick="event.stopPropagation();document.getElementById('schema-input').click()">
+                  + Add another schema
+                </button>
               </div>
               <div id="dz-schema-auto" style="display:none">
                 <span class="dz-badge-opt">Auto-detected from data</span>
               </div>
               <button class="btn-secondary" id="btn-schema-select"
                       onclick="event.stopPropagation();document.getElementById('schema-input').click()">
-                Select Schema File
+                Select Schema File(s)
               </button>
-              <input type="file" id="schema-input" accept=".json" style="display:none" />
+              <input type="file" id="schema-input" accept=".json" multiple style="display:none" />
             </div>
           </div>
           <!-- Continue button — appears once data is loaded -->
@@ -717,6 +748,13 @@
             <div class="stats-mini" id="detail-stats"></div>
             <div class="chart-type-btns" id="chart-type-btns"></div>
             <div class="chart-area"><canvas id="main-chart"></canvas></div>
+            <div id="chart-dedup-note" style="display:none;margin-top:8px;font-size:11px;
+                 color:var(--warn);background:#fff7ed;border:1px solid #f5c89a;
+                 border-radius:6px;padding:6px 12px">
+              ⚠ This participant-level view uses only the <strong>first tumour record</strong>
+              per participant (earliest by diagnosis year). Participants with multiple tumour
+              records: see <strong>N_TUMOURS</strong>.
+            </div>
           </div>
           <div class="card" id="enum-card" style="display:none">
             <div class="card-title">Code Reference</div>

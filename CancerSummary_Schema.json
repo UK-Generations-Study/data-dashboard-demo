@@ -1,0 +1,214 @@
+{
+  "$id": "https://www.breakthroughgenerations.org.uk/schemas/CancerSummary.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CancerSummary",
+  "type": "object",
+  "x-groupLabels": {
+    "id": "Identifiers",
+    "cancer_diagnosis": "Cancer Diagnosis",
+    "tumour_characteristics": "Tumour Characteristics",
+    "biomarkers": "Tumour Biomarkers"
+  },
+  "properties": {
+    "TCode": {
+      "description": "Pseudo-anonymised 8-character study identifier.",
+      "type": "string",
+      "x-group": "id"
+    },
+    "TUMOUR_ID": {
+      "description": "Unique tumour identifier.",
+      "type": "string",
+      "x-group": "id"
+    },
+    "DIAGNOSIS_DATE_SHIFTED": {
+      "description": "Date-shifted diagnosis date (privacy protected).",
+      "type": ["string", "null"],
+      "x-type": "string",
+      "x-group": "id"
+    },
+    "N_TUMOURS": {
+      "description": "Number of tumour records for this participant in the cancer summary file.",
+      "type": ["integer", "null"],
+      "x-group": "cancer_diagnosis"
+    },
+    "DIAGNOSIS_YEAR": {
+      "description": "Year of cancer diagnosis.",
+      "type": ["integer", "null"],
+      "x-group": "cancer_diagnosis"
+    },
+    "AGE_AT_DIAGNOSIS": {
+      "description": "Age at diagnosis (years).",
+      "type": ["number", "null"],
+      "x-unit": "years",
+      "x-group": "cancer_diagnosis"
+    },
+    "ICD_CODE": {
+      "description": "ICD-10-O2 cancer site code.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "cancer_diagnosis"
+    },
+    "MORPH_CODE": {
+      "description": "ICD-O morphology code.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "cancer_diagnosis"
+    },
+    "CANCER_SITE": {
+      "description": "Anatomical site of cancer.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "cancer_diagnosis"
+    },
+    "GROUPED_SITE": {
+      "description": "GLOBOCAN 2020 cancer site grouping.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "cancer_diagnosis"
+    },
+    "SCREEN_DETECTED": {
+      "description": "Detected via NHS screening programme.",
+      "type": ["integer", "null"],
+      "x-type": "binary",
+      "x-group": "cancer_diagnosis",
+      "x-codes": { "0": "No", "1": "Yes" }
+    },
+    "GRADE": {
+      "description": "Histological grade of tumour.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "tumour_characteristics",
+      "x-codes": {
+        "G1": "Grade 1 (Well differentiated)",
+        "G2": "Grade 2 (Moderately differentiated)",
+        "G3": "Grade 3 (Poorly differentiated)",
+        "GX": "Grade unknown"
+      }
+    },
+    "TUMOUR_SIZE": {
+      "description": "Largest tumour dimension (mm).",
+      "type": ["number", "null"],
+      "x-unit": "mm",
+      "x-group": "tumour_characteristics"
+    },
+    "STAGE": {
+      "description": "Overall stage at diagnosis.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "tumour_characteristics",
+      "x-codes": {
+        "I":   "Stage I",
+        "II":  "Stage II",
+        "III": "Stage III",
+        "IV":  "Stage IV",
+        "X":   "Unknown"
+      }
+    },
+    "LATERALITY": {
+      "description": "Side of body affected.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "tumour_characteristics",
+      "x-codes": {
+        "L": "Left",
+        "R": "Right",
+        "M": "Midline / bilateral",
+        "B": "Bilateral",
+        "8": "Not applicable",
+        "9": "Unknown"
+      }
+    },
+    "T_STAGE": {
+      "description": "T component of TNM staging (primary tumour size/extent).",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "tumour_characteristics",
+      "x-codes": {
+        "T1a": "T1a (≤5 mm)",
+        "T1b": "T1b (>5–10 mm)",
+        "T1c": "T1c (>10–20 mm)",
+        "T1":  "T1 (≤20 mm)",
+        "T2":  "T2 (>20–50 mm)",
+        "T3":  "T3 (>50 mm)",
+        "T4":  "T4 (chest wall/skin involvement)",
+        "TX":  "TX (cannot be assessed)"
+      }
+    },
+    "N_STAGE": {
+      "description": "N component of TNM staging (regional lymph node involvement).",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "tumour_characteristics",
+      "x-codes": {
+        "N0": "N0 (no regional node involvement)",
+        "N1": "N1 (1–3 axillary nodes)",
+        "N2": "N2 (4–9 axillary nodes)",
+        "N3": "N3 (≥10 nodes or internal mammary)",
+        "NX": "NX (cannot be assessed)"
+      }
+    },
+    "M_STAGE": {
+      "description": "M component of TNM staging (distant metastasis).",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "tumour_characteristics",
+      "x-codes": {
+        "M0": "M0 (no distant metastasis)",
+        "M1": "M1 (distant metastasis present)",
+        "MX": "MX (cannot be assessed)"
+      }
+    },
+    "ER_STATUS": {
+      "description": "Oestrogen receptor status.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "biomarkers",
+      "x-codes": {
+        "Positive":   "ER Positive",
+        "Negative":   "ER Negative",
+        "Borderline": "Borderline",
+        "Unknown":    "Unknown"
+      }
+    },
+    "PR_STATUS": {
+      "description": "Progesterone receptor status.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "biomarkers",
+      "x-codes": {
+        "Positive":   "PR Positive",
+        "Negative":   "PR Negative",
+        "Borderline": "Borderline",
+        "Unknown":    "Unknown"
+      }
+    },
+    "HER2_STATUS": {
+      "description": "HER2 receptor status (IHC).",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "biomarkers",
+      "x-codes": {
+        "Positive":   "HER2 Positive",
+        "Negative":   "HER2 Negative",
+        "Borderline": "Borderline (requires FISH)",
+        "Unknown":    "Unknown"
+      }
+    },
+    "HER2_FISH": {
+      "description": "HER2 fluorescence in-situ hybridisation result.",
+      "type": ["string", "null"],
+      "x-type": "categorical",
+      "x-group": "biomarkers",
+      "x-codes": {
+        "Positive": "FISH Positive (amplified)",
+        "Negative": "FISH Negative (not amplified)"
+      }
+    },
+    "Ki67": {
+      "description": "Ki-67 proliferation index (%).",
+      "type": ["number", "null"],
+      "x-unit": "%",
+      "x-group": "biomarkers"
+    }
+  }
+}

@@ -96,8 +96,16 @@ let SCHEMA = {
 const BUILTIN_SCHEMA       = SCHEMA;  // preserved reference to built-in
 const BUILTIN_GROUP_LABELS = {
   id:'Identifier', demographics:'Demographics', anthropometry:'Anthropometry',
-  reproductive:'Reproductive', lifestyle:'Lifestyle', medical:'Medical', family:'Family History'
+  reproductive:'Reproductive', lifestyle:'Lifestyle', medical:'Medical', family:'Family History',
+  cancer_diagnosis:'Cancer Diagnosis', tumour_characteristics:'Tumour Characteristics',
+  biomarkers:'Tumour Biomarkers'
 };
+
+// Preferred group order — cancer groups always appear after study groups
+const GROUP_ORDER = [
+  'demographics','anthropometry','reproductive','lifestyle','medical','family',
+  'cancer_diagnosis','tumour_characteristics','biomarkers'
+];
 let GROUP_LABELS = Object.assign({}, BUILTIN_GROUP_LABELS);
 let schemaSource = 'builtin'; // 'builtin' | 'file' | 'inferred'
 
@@ -163,6 +171,20 @@ function toast(msg, ms=2500) {
   el.textContent = msg;
   el.style.display = 'block';
   setTimeout(() => { el.style.display = 'none'; }, ms);
+}
+
+// Persistent dismissible warning banner — stays until the user closes it.
+// Calling it again appends a second line to the same banner.
+function warnBanner(msg) {
+  const banner = $('warn-banner');
+  const text   = $('warn-banner-text');
+  if (!banner || !text) return;
+  if (banner.style.display === 'flex' && text.innerHTML) {
+    text.innerHTML += '<br>' + msg;
+  } else {
+    text.innerHTML = msg;
+    banner.style.display = 'flex';
+  }
 }
 
 function typeClass(t) {
@@ -394,34 +416,138 @@ function inferSchemaFromData(data) {
 
 // ── File loading ────────────────────────────────────────────────────────────
 
-let pendingData   = null; // data loaded but schema not yet resolved
-let pendingSchema = null; // parsed schema waiting for data
-let dataFileName  = '';   // filename of the loaded data JSON
-let schemaFileName = '';  // filename of the loaded schema JSON
+let pendingData     = null; // merged data array (set by continueToApp)
+let pendingSchema   = null; // merged schema (set by continueToApp)
+let pendingDatasets = [];   // array of { data, fileName } — accumulated before merge
+let pendingSchemas  = [];   // array of { schema, groupLabels, fileName }
+
+// Tracks variable names that came from datasets with duplicate TCodes
+// (i.e. one participant had multiple rows — only first was kept)
+let DEDUP_VARIABLES = new Set();
+
+// ── Detect the TCode join key field in a record ───────────────────────────
+function detectTCodeField(record) {
+  if (!record) return null;
+  if ('TCode'    in record) return 'TCode';
+  if ('R0_TCode' in record) return 'R0_TCode';
+  return Object.keys(record).find(k => k.endsWith('TCode')) || null;
+}
+
+// ── Merge multiple data files — full outer join on TCode ─────────────────
+function mergeDatasets(datasets) {
+  if (!datasets.length) return [];
+  DEDUP_VARIABLES = new Set(); // reset on each merge
+  if (datasets.length === 1) return datasets[0].data;
+
+  const prepared = datasets.map(ds => {
+    const tcodeField = ds.data.length ? detectTCodeField(ds.data[0]) : null;
+    if (!tcodeField) throw new Error(
+      `Cannot find a TCode field in "${ds.fileName}". Expected "TCode" or "R0_TCode".`
+    );
+    // Count records per TCode before dedup (for N_TUMOURS)
+    const rawCounts = new Map();
+    ds.data.forEach(r => {
+      const t = r[tcodeField];
+      if (t) rawCounts.set(t, (rawCounts.get(t) || 0) + 1);
+    });
+    const hasDuplicates = [...rawCounts.values()].some(c => c > 1);
+
+    // Sort by DIAGNOSIS_YEAR ascending so earliest record wins on dedup
+    const sorted = [...ds.data].sort((a, b) =>
+      (a.DIAGNOSIS_YEAR ?? 9999) - (b.DIAGNOSIS_YEAR ?? 9999)
+    );
+    const seen = new Map();
+    sorted.forEach(r => { if (r[tcodeField] && !seen.has(r[tcodeField])) seen.set(r[tcodeField], r); });
+    return { ...ds, tcodeField, deduped: seen, rawCounts, hasDuplicates };
+  });
+
+  const primaryField = prepared[0].tcodeField;
+  const allTCodes    = new Set();
+  prepared.forEach(ds => ds.deduped.forEach((_, k) => allTCodes.add(k)));
+
+  const merged = [];
+  allTCodes.forEach(tcode => {
+    const rec = { [primaryField]: tcode };
+    prepared.forEach((ds, i) => {
+      const r = ds.deduped.get(tcode);
+      if (r) {
+        // Inject N_TUMOURS for datasets with duplicate TCodes
+        if (ds.hasDuplicates) {
+          rec['N_TUMOURS'] = ds.rawCounts.get(tcode) || 1;
+        }
+        Object.entries(r).forEach(([k, v]) => {
+          if (i > 0 && k === ds.tcodeField) return; // skip non-primary TCode field
+          if (!(k in rec)) rec[k] = v;
+        });
+        // Track which variables came from deduplicated datasets
+        if (ds.hasDuplicates && i > 0) {
+          Object.keys(r).forEach(k => { if (k !== ds.tcodeField) DEDUP_VARIABLES.add(k); });
+          DEDUP_VARIABLES.add('N_TUMOURS');
+        }
+      }
+    });
+    merged.push(rec);
+  });
+  return merged;
+}
+
+// ── Merge multiple schema files — detect overlapping variable names ───────
+function mergeSchemas(schemas) {
+  const merged = {}, mergedLabels = {}, conflicts = [];
+  schemas.forEach(({ schema, groupLabels }) => {
+    Object.entries(schema).forEach(([key, entry]) => {
+      if (entry.group === 'id') return; // skip join-key fields
+      if (key in merged) { conflicts.push(key); }
+      else               { merged[key] = entry; }
+    });
+    Object.assign(mergedLabels, groupLabels);
+  });
+  return { schema: merged, groupLabels: mergedLabels, conflicts };
+}
+
+// ── Update file-list UI inside each panel ────────────────────────────────
+function updateDataFileList() {
+  $('dz-data-name').innerHTML = pendingDatasets.map(ds =>
+    `<div>📄 ${ds.fileName} &nbsp;·&nbsp; ${ds.data.length.toLocaleString()} records</div>`
+  ).join('');
+}
+function updateSchemaFileList() {
+  $('dz-schema-name').innerHTML = pendingSchemas.map(s =>
+    `<div>📋 ${s.fileName} &nbsp;·&nbsp; ${Object.keys(s.schema).length} variables</div>`
+  ).join('');
+}
 
 function setupDrop() {
-  // Data panel
+  // Data panel — multiple files allowed
   const dzData = $('dz-data');
   const fiData = $('file-input');
+  fiData.setAttribute('multiple', '');
   dzData.addEventListener('click', () => fiData.click());
-  fiData.addEventListener('change', e => { if (e.target.files[0]) loadDataFile(e.target.files[0]); });
+  fiData.addEventListener('change', e => {
+    Array.from(e.target.files).forEach(loadDataFile);
+    e.target.value = '';
+  });
   dzData.addEventListener('dragover', e => { e.preventDefault(); dzData.classList.add('dragover'); });
   dzData.addEventListener('dragleave', () => dzData.classList.remove('dragover'));
   dzData.addEventListener('drop', e => {
     e.preventDefault(); dzData.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) loadDataFile(e.dataTransfer.files[0]);
+    Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.json')).forEach(loadDataFile);
   });
 
-  // Schema panel
+  // Schema panel — multiple files allowed
   const dzSchema = $('dz-schema');
   const fiSchema = $('schema-input');
+  fiSchema.setAttribute('multiple', '');
   dzSchema.addEventListener('click', () => fiSchema.click());
-  fiSchema.addEventListener('change', e => { if (e.target.files[0]) loadSchemaFile(e.target.files[0]); });
+  fiSchema.addEventListener('change', e => {
+    Array.from(e.target.files).forEach(f => loadSchemaFile(f));
+    e.target.value = '';
+  });
   dzSchema.addEventListener('dragover', e => { e.preventDefault(); dzSchema.classList.add('dragover'); });
   dzSchema.addEventListener('dragleave', () => dzSchema.classList.remove('dragover'));
   dzSchema.addEventListener('drop', e => {
     e.preventDefault(); dzSchema.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) loadSchemaFile(e.dataTransfer.files[0]);
+    Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.json')).forEach(f => loadSchemaFile(f));
   });
 }
 
@@ -431,15 +557,16 @@ function loadDataFile(file) {
     try {
       const data = JSON.parse(e.target.result);
       if (!Array.isArray(data)) throw new Error('Expected a JSON array of records');
-      pendingData  = data;
-      dataFileName = file.name;
-      // Update data panel UI
-      $('dz-data-hint').style.display = 'none';
+      // Prevent loading the same file twice
+      if (pendingDatasets.find(ds => ds.fileName === file.name)) {
+        toast(`"${file.name}" already loaded — skipped.`); return;
+      }
+      pendingDatasets.push({ data, fileName: file.name });
+      $('dz-data-hint').style.display    = 'none';
       $('btn-data-select').style.display = 'none';
-      $('dz-data-ok').style.display = '';
-      $('dz-data-name').textContent = `${file.name}  ·  ${data.length.toLocaleString()} records`;
+      $('dz-data-ok').style.display      = '';
       $('dz-data').classList.add('loaded');
-      // Show Continue button — user can still add schema before proceeding
+      updateDataFileList();
       $('dz-continue').style.display = '';
     } catch (err) { alert('Failed to parse data file: ' + err.message); }
   };
@@ -447,9 +574,22 @@ function loadDataFile(file) {
 }
 
 function continueToApp() {
-  if (!pendingData) return;
-  if (pendingSchema) {
-    applySchema(pendingSchema.schema, pendingSchema.groupLabels, 'file');
+  if (!pendingDatasets.length) return;
+  // Merge all data files
+  let finalData;
+  try { finalData = mergeDatasets(pendingDatasets); }
+  catch (err) { alert('Error merging data files:\n' + err.message); return; }
+  pendingData = finalData;
+
+  // Merge schemas (or infer)
+  if (pendingSchemas.length) {
+    const { schema, groupLabels, conflicts } = mergeSchemas(pendingSchemas);
+    if (conflicts.length) {
+      alert('⚠ Overlapping variable names found across schema files — please fix before continuing:\n\n' +
+            conflicts.join(', '));
+      return;
+    }
+    applySchema(schema, groupLabels, 'file');
   } else {
     const inferred = inferSchemaFromData(pendingData);
     applySchema(inferred.schema, inferred.groupLabels, 'inferred');
@@ -463,26 +603,33 @@ function loadSchemaFile(file, fromDashboard = false) {
     try {
       const json = JSON.parse(e.target.result);
       const { schema, groupLabels } = parseSchemaFile(json);
-      pendingSchema  = { schema, groupLabels };
-      schemaFileName = file.name;
+      if (pendingSchemas.find(s => s.fileName === file.name)) {
+        toast(`"${file.name}" already loaded — skipped.`); return;
+      }
+      pendingSchemas.push({ schema, groupLabels, fileName: file.name });
 
-      // Update load-screen schema panel UI (may not be visible, but keep in sync)
       $('dz-schema-hint').style.display    = 'none';
       $('dz-schema-auto').style.display    = 'none';
       $('btn-schema-select').style.display = 'none';
       $('dz-schema-ok').style.display      = '';
-      $('dz-schema-name').textContent      = `${file.name}  ·  ${Object.keys(schema).length} variables`;
       $('dz-schema').classList.add('loaded');
+      updateSchemaFileList();
 
-      applySchema(schema, groupLabels, 'file');
+      // Apply merged schema preview (if no conflicts)
+      const merged = mergeSchemas(pendingSchemas);
+      if (!merged.conflicts.length) {
+        applySchema(merged.schema, merged.groupLabels, 'file');
+        pendingSchema = merged;
+      }
 
-      // If already in the dashboard, re-render immediately with new schema
       if (fromDashboard && pendingData) {
+        if (merged.conflicts.length) {
+          alert('⚠ Overlapping variable names:\n' + merged.conflicts.join(', ')); return;
+        }
         initApp(pendingData);
         toast(`✓ Schema updated: ${file.name}`);
       }
-      // If still on load screen with data ready, show Continue if not shown
-      if (!fromDashboard && pendingData && $('dz-continue').style.display === 'none') {
+      if (!fromDashboard && pendingDatasets.length && $('dz-continue').style.display === 'none') {
         $('dz-continue').style.display = '';
       }
     } catch (err) { alert('Failed to parse schema file: ' + err.message); }
@@ -512,6 +659,10 @@ function initApp(data) {
   rawData    = data;
   cohortData = data;
 
+  // Clear any previous warning banner
+  const wb = $('warn-banner');
+  if (wb) { wb.style.display = 'none'; $('warn-banner-text').innerHTML = ''; }
+
   $('load-screen').classList.remove('active');
   $('sidebar').style.display   = 'flex';
   $('nav-tabs').style.display  = 'flex';
@@ -524,10 +675,16 @@ function initApp(data) {
   activeGroup = 'all';
   const gf = $('group-filter');
   gf.innerHTML = '<button class="gf-btn active" data-group="all">All</button>';
-  // Collect groups that actually appear in the schema
+  // Collect groups that actually appear in the schema, sorted by preferred order
   const usedGroups = [...new Set(
     Object.values(SCHEMA).map(s => s.group).filter(g => g && g !== 'id')
-  )];
+  )].sort((a, b) => {
+    const ia = GROUP_ORDER.indexOf(a), ib = GROUP_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
   usedGroups.forEach(g => {
     const lbl = GROUP_LABELS[g] || (g.charAt(0).toUpperCase() + g.slice(1));
     const btn = document.createElement('button');
@@ -541,7 +698,14 @@ function initApp(data) {
   if (data.length && schemaSource !== 'inferred') {
     const dataCols   = new Set(Object.keys(data[0]));
     const schemaCols = new Set(Object.keys(SCHEMA));
-    const inDataOnly   = [...dataCols].filter(k => !schemaCols.has(k));
+
+    // Fields with group='id' are intentionally hidden — don't warn about them
+    const knownIdFields = new Set(['R0_TCode', 'TCode']);
+    pendingSchemas.forEach(({ schema }) => {
+      Object.entries(schema).forEach(([k, v]) => { if (v.group === 'id') knownIdFields.add(k); });
+    });
+
+    const inDataOnly   = [...dataCols].filter(k => !schemaCols.has(k) && !knownIdFields.has(k));
     const inSchemaOnly = [...schemaCols].filter(k => !dataCols.has(k));
 
     // Auto-add columns that are in data but missing from schema
@@ -551,14 +715,10 @@ function initApp(data) {
     }
     // Warn about schema variables absent from data
     if (inSchemaOnly.length) {
-      setTimeout(() => toast(
-        `⚠ ${inSchemaOnly.length} schema variable(s) not found in data (e.g. ${inSchemaOnly.slice(0,3).join(', ')})`
-      , 5000), 800);
+      warnBanner(`⚠ ${inSchemaOnly.length} schema variable(s) not found in data and will be ignored: <strong>${inSchemaOnly.join(', ')}</strong>`);
     }
     if (inDataOnly.length) {
-      setTimeout(() => toast(
-        `ℹ ${inDataOnly.length} data column(s) not in schema — types auto-inferred`
-      , 4000), 400);
+      warnBanner(`ℹ ${inDataOnly.length} data column(s) not in schema — types have been auto-inferred: <strong>${inDataOnly.join(', ')}</strong>`);
     }
   }
 
@@ -580,7 +740,15 @@ function renderVarList() {
   list.innerHTML = '';
   let shown = 0;
 
-  const keys = Object.keys(SCHEMA).filter(k => k !== 'R0_TCode');
+  // Sort by GROUP_ORDER so variables appear in the same order as the filter buttons
+  const keys = Object.keys(SCHEMA)
+    .filter(k => k !== 'R0_TCode')
+    .sort((a, b) => {
+      const ga = SCHEMA[a]?.group ?? '', gb = SCHEMA[b]?.group ?? '';
+      const ia = GROUP_ORDER.indexOf(ga), ib = GROUP_ORDER.indexOf(gb);
+      const ra = ia === -1 ? 9999 : ia, rb = ib === -1 ? 9999 : ib;
+      return ra - rb;
+    });
 
   keys.forEach(key => {
     const s = SCHEMA[key];
@@ -736,6 +904,12 @@ function renderVarDetail(key, data) {
   btnContainer.appendChild(dlBtn);
 
   drawChart(key, data);
+
+  // Dedup note — shown for variables from datasets with multiple rows per TCode
+  const dedupNote = $('chart-dedup-note');
+  if (dedupNote) {
+    dedupNote.style.display = DEDUP_VARIABLES.has(key) ? '' : 'none';
+  }
 
   // Enum legend
   const enumCard = $('enum-card');
@@ -1396,8 +1570,12 @@ function exportBrandedPNG(element, filename, hideEl) {
 
     // Right-aligned metadata
     const dateStr   = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const dataLabel = dataFileName   || 'synthetic_data.json';
-    const schLabel  = schemaFileName || (schemaSource === 'inferred' ? 'Auto-detected' : schemaSource === 'builtin' ? 'Built-in' : 'unknown');
+    const dataLabel = pendingDatasets.length
+      ? pendingDatasets.map(ds => ds.fileName).join(', ')
+      : 'synthetic_data.json';
+    const schLabel  = pendingSchemas.length
+      ? pendingSchemas.map(s => s.fileName).join(', ')
+      : (schemaSource === 'inferred' ? 'Auto-detected' : schemaSource === 'builtin' ? 'Built-in' : 'unknown');
 
     ctx2.textAlign    = 'right';
     ctx2.textBaseline = 'top';
