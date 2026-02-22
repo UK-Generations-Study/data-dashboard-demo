@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "created": "2026-02-21T00:00:00.000Z",
+    "tool": "Generations Study Demo Dashboard",
+    "dataset": "synthetic_data.json",
+    "description": "Premenopausal, parous, current alcohol drinkers with BMI > 25",
+    "total_n": 1000,
+    "cohort_n": null
+  },
+  "filters": [
+    {
+      "field": "R0_Menopause",
+      "operator": "in",
+      "value": "2",
+      "logic": "AND",
+      "note": "Premenopausal women only"
+    },
+    {
+      "field": "R0_Parous",
+      "operator": "in",
+      "value": "1",
+      "logic": "AND",
+      "note": "Parous (at least one live birth)"
+    },
+    {
+      "field": "R0_BMI",
+      "operator": ">",
+      "value": "25",
+      "logic": "AND",
+      "note": "BMI above 25 at study entry"
+    },
+    {
+      "field": "R0_AlcoholStatus",
+      "operator": "in",
+      "value": "2",
+      "logic": "AND",
+      "note": "Current alcohol drinkers"
+    }
+  ],
+  "schema_version": "https://www.breakthroughgenerations.org.uk/schemas/DerivedVariables.json",
+  "application": {
+    "r_code": "df_cohort <- df[df$R0_Menopause == 2 & df$R0_Parous == 1 & df$R0_BMI > 25 & df$R0_AlcoholStatus == 2 & !is.na(df$R0_BMI), ]",
+    "python_code": "df_cohort = df[(df['R0_Menopause']==2) & (df['R0_Parous']==1) & (df['R0_BMI']>25) & (df['R0_AlcoholStatus']==2) & df['R0_BMI'].notna()]"
+  }
+}
