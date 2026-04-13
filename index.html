@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self';" />
   <title>Generations Study – Data Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4/build/index.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <link href="vendor/fonts/nunito.css" rel="stylesheet">
+  <script src="vendor/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+  <script src="vendor/chartjs-chart-boxplot.umd.min.js" integrity="sha384-gdbF/I+Cr4dfXk+jVTKN97eXIQvJRSzhLVYTbyQEH2vXtmgEl1jeoY7PDpf4ka3A" crossorigin="anonymous"></script>
+  <script src="vendor/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
   <style>
     /* ── Reset ───────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -575,9 +575,9 @@
 <header>
   <button id="btn-sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
   <div class="logo-block">
-    <img class="logo-g" src="logo-g.png" alt="">
-    <img class="logo-wordmark" src="logo-white.png" alt="generations"
-         onerror="this.style.display='none'">
+    <img class="logo-g" src="assets/logo-g.png" alt="">
+    <img class="logo-wordmark" src="assets/logo-white.png" alt="generations"
+         id="logo-wordmark">
     <div class="logo-divider"></div>
     <div class="logo-text">
       <p>Data Dashboard &nbsp;&middot;&nbsp; Synthetic Demo</p>
@@ -601,7 +601,7 @@
     <div class="sidebar-header">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <h3>Variables <span id="var-count-badge">(0)</span></h3>
-        <button title="Load or swap schema file" onclick="App.reloadSchema()"
+        <button id="btn-reload-schema" title="Load or swap schema file"
           style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;
                  border:1px solid var(--border);background:white;cursor:pointer;
                  color:var(--muted);font-family:inherit;white-space:nowrap;flex-shrink:0">
@@ -633,7 +633,7 @@
     <!-- Warning banner — stays visible until dismissed -->
     <div id="warn-banner">
       <div id="warn-banner-text"></div>
-      <button id="warn-banner-close" title="Dismiss" onclick="this.parentElement.style.display='none'">×</button>
+      <button id="warn-banner-close" title="Dismiss">×</button>
     </div>
 
     <div class="tab-panels" id="tab-panels">
@@ -676,13 +676,11 @@
               <div id="dz-data-ok" style="display:none">
                 <div class="dz-badge-ok">&#10003; Loaded</div>
                 <div class="dz-status" id="dz-data-name" style="font-size:11px;text-align:left;width:100%"></div>
-                <button class="btn-secondary" style="font-size:11px;padding:4px 12px;margin-top:4px"
-                        onclick="event.stopPropagation();document.getElementById('file-input').click()">
+                <button class="btn-secondary" id="btn-add-data-file" style="font-size:11px;padding:4px 12px;margin-top:4px">
                   + Add another file
                 </button>
               </div>
-              <button class="btn-primary" id="btn-data-select"
-                      onclick="event.stopPropagation();document.getElementById('file-input').click()">
+              <button class="btn-primary" id="btn-data-select">
                 Select Data File(s)
               </button>
               <input type="file" id="file-input" accept=".json" multiple style="display:none" />
@@ -696,16 +694,14 @@
               <div id="dz-schema-ok" style="display:none">
                 <div class="dz-badge-ok">&#10003; Loaded</div>
                 <div class="dz-status" id="dz-schema-name" style="font-size:11px;text-align:left;width:100%"></div>
-                <button class="btn-secondary" style="font-size:11px;padding:4px 12px;margin-top:4px"
-                        onclick="event.stopPropagation();document.getElementById('schema-input').click()">
+                <button class="btn-secondary" id="btn-add-schema-file" style="font-size:11px;padding:4px 12px;margin-top:4px">
                   + Add another schema
                 </button>
               </div>
               <div id="dz-schema-auto" style="display:none">
                 <span class="dz-badge-opt">Auto-detected from data</span>
               </div>
-              <button class="btn-secondary" id="btn-schema-select"
-                      onclick="event.stopPropagation();document.getElementById('schema-input').click()">
+              <button class="btn-secondary" id="btn-schema-select">
                 Select Schema File(s)
               </button>
               <input type="file" id="schema-input" accept=".json" multiple style="display:none" />
@@ -713,8 +709,7 @@
           </div>
           <!-- Continue button — appears once data is loaded -->
           <div id="dz-continue" style="display:none;text-align:center;margin-top:8px">
-            <button class="btn-primary" style="padding:12px 36px;font-size:15px"
-                    onclick="App.continueToApp()">
+            <button class="btn-primary" id="btn-continue" style="padding:12px 36px;font-size:15px">
               Continue to Dashboard &rarr;
             </button>
           </div>
@@ -789,7 +784,7 @@
               <label>Target variable</label>
               <select class="form-select" id="strat-target"></select>
             </div>
-            <button class="btn-primary" onclick="App.renderStratified()">Compare</button>
+            <button class="btn-primary" id="btn-strat-compare">Compare</button>
           </div>
           <div id="strat-charts-area"></div>
         </div>
@@ -802,7 +797,7 @@
             <div class="card">
               <div class="card-title">Filter Criteria</div>
               <div id="filter-rows"></div>
-              <button class="btn-secondary" onclick="App.addFilter()" style="margin-top:8px">
+              <button class="btn-secondary" id="btn-add-filter" style="margin-top:8px">
                 + Add Filter
               </button>
             </div>
@@ -810,9 +805,9 @@
               <div class="card-title">Attrition Flow</div>
               <div class="attrition-flow" id="attrition-flow"></div>
               <div class="cohort-actions">
-                <button class="btn-primary" onclick="App.exportCohort()">Export Cohort JSON</button>
-                <button class="btn-secondary" onclick="App.exportAttritionPNG()">↓ Export PNG</button>
-                <button class="btn-secondary" onclick="App.clearFilters()">Clear All</button>
+                <button class="btn-primary" id="btn-export-cohort">Export Cohort JSON</button>
+                <button class="btn-secondary" id="btn-export-attrition">↓ Export PNG</button>
+                <button class="btn-secondary" id="btn-clear-filters">Clear All</button>
               </div>
             </div>
           </div>
@@ -864,8 +859,8 @@
                 <option value="">None (whole cohort)</option>
               </select>
             </div>
-            <button class="btn-primary" onclick="App.renderTable1()">Generate</button>
-            <button class="btn-secondary" onclick="App.exportTable1CSV()">Export CSV</button>
+            <button class="btn-primary" id="btn-render-table1">Generate</button>
+            <button class="btn-secondary" id="btn-export-table1-csv">Export CSV</button>
           </div>
           <div style="overflow-x:auto">
             <table class="t1-table" id="t1-table">
@@ -891,6 +886,6 @@
 </div><!-- /app-shell -->
 
 <div id="toast"></div>
-<script src="app.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
