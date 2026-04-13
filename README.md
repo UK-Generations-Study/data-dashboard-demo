@@ -1,29 +1,27 @@
-# Generations Study – Data Dashboard (Demo)
+# Generations Study – Data Dashboard
 
-A browser-based prototype for exploring the Generations Study dataset.
+A browser-based tool for exploring the Generations Study dataset.
 All processing occurs **locally in your browser** — no data is ever transmitted externally.
 
 ---
 
 ## Quick Start
 
-Open the dashboard directly in your browser — no installation needed:
-
-> **https://uk-generations-study.github.io/data-dashboard-demo/**
+Open `index.html` directly in any modern browser — no installation, build step, or internet connection required.
 
 ### Load a single dataset
 
-1. Drag-and-drop `synthetic_data.json` onto the **Data File** drop zone
-2. Drag-and-drop `DerivedVariables_Schema.json` onto the **Schema File** drop zone
-3. Click **Load Dashboard**
+1. Drag-and-drop `examples/synthetic_data.json` onto the **Data File** drop zone
+2. Drag-and-drop `examples/DerivedVariables_Schema.json` onto the **Schema File** drop zone
+3. Click **Continue to Dashboard**
 
 ### Load multiple datasets (multi-file merge)
 
 The dashboard supports combining multiple JSON files via a full outer join on participant ID (`TCode`). For example, to explore derived variables alongside cancer summary data:
 
-1. Drag-and-drop **both** `synthetic_data.json` and `synthetic_cancer_data.json` onto the **Data File** drop zone (or add them one at a time using "Add another file")
-2. Drag-and-drop **both** `DerivedVariables_Schema.json` and `CancerSummary_Schema.json` onto the **Schema File** drop zone
-3. Click **Load Dashboard**
+1. Drag-and-drop **both** `examples/synthetic_data.json` and `examples/synthetic_cancer_data.json` onto the **Data File** drop zone (or add them one at a time using "Add another file")
+2. Drag-and-drop **both** `examples/DerivedVariables_Schema.json` and `examples/CancerSummary_Schema.json` onto the **Schema File** drop zone
+3. Click **Continue to Dashboard**
 
 The two datasets are joined on `TCode`. Participants not present in all files are retained (full outer join). For the cancer data, which has one row per tumour (some participants have multiple), only the earliest tumour record per participant is used; a **N_TUMOURS** variable records how many tumour records each participant had. A note is shown on charts for variables derived from deduplicated datasets.
 
@@ -34,21 +32,43 @@ The two datasets are joined on `TCode`. Participants not present in all files ar
 ### Repository contents
 
 ```
-├── index.html                    ← Dashboard (open locally as an alternative)
-├── app.js                        ← Dashboard logic
-├── synthetic_data.json           ← 1000-participant synthetic derived-variables dataset
-├── DerivedVariables_Schema.json  ← JSON Schema for the derived variables dataset
-├── synthetic_cancer_data.json    ← Synthetic cancer summary (231 records, 220 participants)
-├── CancerSummary_Schema.json     ← JSON Schema for the cancer summary dataset
-├── sample_cohort.json            ← Example cohort definition (JSON)
-├── generate_data.py              ← Python script that produced synthetic_data.json
-├── generate_cancer_data.py       ← Python script that produced synthetic_cancer_data.json
-├── examples.R                    ← R loading and analysis examples
-├── examples.py                   ← Python loading and analysis examples
-└── README.md                     ← This file
+├── index.html                         ← Dashboard (open in browser)
+├── js/
+│   ├── main.js                        ← Entry point and event wiring
+│   ├── state.js                       ← Shared mutable state
+│   ├── utils.js                       ← DOM utilities, escaping, stats helpers
+│   ├── schema.js                      ← Schema parsing, inference, merging
+│   ├── data-loader.js                 ← File loading, dataset merging, drag-drop
+│   ├── exports.js                     ← PNG and JSON export helpers
+│   └── views/
+│       ├── tabs.js                    ← Tab switching
+│       ├── sidebar.js                 ← Variable list and selection
+│       ├── overview.js                ← Overview tab
+│       ├── explore.js                 ← Variable detail and chart drawing
+│       ├── missingness.js             ← Missingness chart
+│       ├── stratified.js              ← Stratified comparison
+│       ├── cohort.js                  ← Cohort builder filters and attrition
+│       └── table1.js                  ← Descriptive statistics table and CSV export
+├── vendor/
+│   ├── chart.umd.min.js              ← Chart.js (bundled locally)
+│   ├── chartjs-chart-boxplot.umd.min.js ← Chart.js box plot plugin
+│   ├── html2canvas.min.js            ← HTML-to-canvas for PNG export
+│   └── fonts/
+│       └── nunito.css                 ← Nunito font
+├── assets/
+│   ├── logo-g.png                     ← Logo icon
+│   └── logo-white.png                 ← Logo wordmark
+├── examples/
+│   ├── synthetic_data.json            ← 1000-participant synthetic dataset
+│   ├── DerivedVariables_Schema.json   ← JSON Schema for derived variables
+│   ├── synthetic_cancer_data.json     ← Synthetic cancer summary (231 records)
+│   ├── CancerSummary_Schema.json      ← JSON Schema for cancer summary
+│   ├── sample_cohort.json             ← Example cohort definition
+│   ├── generate_data.py               ← Script that produced synthetic_data.json
+│   └── generate_cancer_data.py        ← Script that produced synthetic_cancer_data.json
+├── LICENSE
+└── README.md
 ```
-
-> **Note:** Chart.js is loaded from CDN (`cdn.jsdelivr.net`). An internet connection is required for the initial page load. Once loaded, all functionality works offline.
 
 ---
 
@@ -84,17 +104,17 @@ Loading a JSON Schema file (Draft 2020-12) enriches the dashboard with:
 
 ---
 
-## Privacy
+## Privacy & Security
 
 All data handling occurs entirely within your browser via the browser's `FileReader` API.
 No participant data is uploaded, transmitted, or stored anywhere outside your device.
-The only external network requests are to load the Chart.js library from CDN on first page load.
+All vendor libraries (Chart.js, html2canvas) are bundled locally — no CDN or external network requests are made.
 
 ---
 
 ## Synthetic Datasets
 
-### Derived variables (`synthetic_data.json`)
+### Derived variables (`examples/synthetic_data.json`)
 
 - **1,000 participants**, fields drawn from the Generations Study variable schema
 - Realistic epidemiological distributions (BMI ~N(24.5, 4.5), smoking ~16%, etc.)
@@ -104,10 +124,10 @@ The only external network requests are to load the Chart.js library from CDN on 
 - No real participant data — all values are synthetic
 
 ```bash
-python3 generate_data.py
+python3 examples/generate_data.py
 ```
 
-### Cancer summary (`synthetic_cancer_data.json`)
+### Cancer summary (`examples/synthetic_cancer_data.json`)
 
 - **231 tumour records** across **220 participants** (~22% of the 1,000)
 - **11 participants** have two tumour records (second primary cancer)
@@ -116,7 +136,7 @@ python3 generate_data.py
 - Joins to `synthetic_data.json` on `TCode`
 
 ```bash
-python3 generate_cancer_data.py
+python3 examples/generate_cancer_data.py
 ```
 
 ---
@@ -140,13 +160,11 @@ Some variables use `999` (or `9999`) to mean "Not Applicable" — distinct from 
 | `999` | `R0_AgeBirthFirst` | No live birth |
 | `9999` | `R0_BreastfeedingDuration` | No live birth |
 
-Filter out sentinels before analysis: see `examples.R` / `examples.py`.
-
 ---
 
 ## Sample Cohort Definition
 
-`sample_cohort.json` defines:
+`examples/sample_cohort.json` defines:
 
 > Premenopausal + Parous + BMI > 25 + Current alcohol drinker
 
@@ -174,30 +192,4 @@ df_cohort = df[mask]
 
 ---
 
-## Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| Single-page HTML + vanilla JS | No build step, no server, open and run |
-| Chart.js via CDN | Mature, well-maintained; avoids embedding library code in the repository |
-| Drag-and-drop data loading | Matches privacy requirement; data never leaves device |
-| Multi-file full outer join | Supports modular datasets (e.g. cancer summary separate from derived variables) |
-| Sidebar + tab layout | Separates variable navigation from analytical views |
-| Sentinel vs null distinction | Preserves schema semantics in missingness visualisation |
-| Cohort export as JSON | Machine-readable; reproducible; includes full participant ID list |
-| Generate-then-load architecture | Dataset is separate from app — analysts can load real data when available |
-| JSON Schema support | Enriches any compatible dataset with labels, types, and groupings |
-
----
-
-## Requirements
-
-- **Dashboard:** any modern browser; internet for initial CDN load
-- **generate_data.py / generate_cancer_data.py:** Python 3.7+ (stdlib only)
-- **examples.R:** R + `jsonlite` (optionally `tableone`)
-- **examples.py:** Python + `pandas`, `numpy`, `matplotlib`
-
----
-
-*This is a synthetic demonstration. All participant records are fictitious.*
 *Schema: Generations Study variable definitions (JSON Schema Draft 2020-12).*
