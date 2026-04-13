@@ -85,10 +85,6 @@ export function renderVarDetail(key, data) {
 
   drawChart(key, data);
 
-  const dedupNote = $('chart-dedup-note');
-  if (dedupNote) {
-    dedupNote.style.display = state.DEDUP_VARIABLES.has(key) ? '' : 'none';
-  }
 
   const enumCard = $('enum-card');
   if (s.codes) {

@@ -136,7 +136,4 @@ export const state = {
   pendingSchema:   null,   // merged schema (set by continueToApp)
   pendingDatasets: [],     // [{ data, fileName, _fp }]
   pendingSchemas:  [],     // [{ schema, groupLabels, fileName, _fp }]
-
-  // Variables that came from datasets with duplicate TCodes
-  DEDUP_VARIABLES: new Set(),
 };

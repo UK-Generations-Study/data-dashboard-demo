@@ -25,7 +25,6 @@ function detectTCodeField(record) {
 // ── Merge multiple data files — full outer join on TCode ────────────────
 function mergeDatasets(datasets) {
   if (!datasets.length) return [];
-  state.DEDUP_VARIABLES = new Set();
   if (datasets.length === 1) return datasets[0].data;
 
   const prepared = datasets.map(ds => {
@@ -33,42 +32,39 @@ function mergeDatasets(datasets) {
     if (!tcodeField) throw new Error(
       `Cannot find a TCode field in "${ds.fileName}". Expected "TCode" or "R0_TCode".`
     );
-    const rawCounts = new Map();
-    ds.data.forEach(r => {
-      const t = r[tcodeField];
-      if (t != null) rawCounts.set(t, (rawCounts.get(t) || 0) + 1);
-    });
-    const hasDuplicates = [...rawCounts.values()].some(c => c > 1);
 
-    const sorted = [...ds.data].sort((a, b) =>
-      (a.DIAGNOSIS_YEAR ?? 9999) - (b.DIAGNOSIS_YEAR ?? 9999)
-    );
-    const seen = new Map();
-    sorted.forEach(r => { if (r[tcodeField] != null && !seen.has(r[tcodeField])) seen.set(r[tcodeField], r); });
-    return { ...ds, tcodeField, deduped: seen, rawCounts, hasDuplicates };
+    // Reject files with duplicate TCodes — multi-row-per-participant data is not yet supported
+    const seen = new Set();
+    for (const r of ds.data) {
+      const t = r[tcodeField];
+      if (t != null && seen.has(t)) {
+        throw new Error(
+          `Duplicate TCode "${t}" found in "${ds.fileName}". ` +
+          `Files with multiple rows per participant are not currently supported.`
+        );
+      }
+      if (t != null) seen.add(t);
+    }
+
+    const byTCode = new Map();
+    ds.data.forEach(r => { if (r[tcodeField] != null) byTCode.set(r[tcodeField], r); });
+    return { ...ds, tcodeField, byTCode };
   });
 
   const primaryField = prepared[0].tcodeField;
   const allTCodes    = new Set();
-  prepared.forEach(ds => ds.deduped.forEach((_, k) => allTCodes.add(k)));
+  prepared.forEach(ds => ds.byTCode.forEach((_, k) => allTCodes.add(k)));
 
   const merged = [];
   allTCodes.forEach(tcode => {
     const rec = { [primaryField]: tcode };
     prepared.forEach((ds, i) => {
-      const r = ds.deduped.get(tcode);
+      const r = ds.byTCode.get(tcode);
       if (r) {
-        if (ds.hasDuplicates) {
-          rec['N_TUMOURS'] = ds.rawCounts.get(tcode) || 1;
-        }
         Object.entries(r).forEach(([k, v]) => {
           if (i > 0 && k === ds.tcodeField) return;
           if (!(k in rec)) rec[k] = v;
         });
-        if (ds.hasDuplicates && i > 0) {
-          Object.keys(r).forEach(k => { if (k !== ds.tcodeField) state.DEDUP_VARIABLES.add(k); });
-          state.DEDUP_VARIABLES.add('N_TUMOURS');
-        }
       }
     });
     merged.push(rec);
