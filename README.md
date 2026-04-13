@@ -35,7 +35,7 @@ To try the dashboard with the included synthetic data, use the files in `example
 
 ### Multi-file merge
 
-When multiple data files are loaded, they are combined via a full outer join on participant ID (`TCode`). Participants not present in all files are retained. For data with multiple rows per participant (e.g. one row per tumour), only the earliest record is used; a **N_TUMOURS** variable records the total count. A note appears on charts for variables from deduplicated datasets.
+When multiple data files are loaded, they are combined via a full outer join on participant ID (`TCode`). Participants not present in all files are retained. Each file must have exactly one row per TCode — files with duplicate TCodes are rejected with an error.
 
 > **Note:** Variable names must not overlap across schema files. If they do, an error is shown before loading.
 
